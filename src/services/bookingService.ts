@@ -1,4 +1,4 @@
-import { PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import { PutCommand,QueryCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { docClient, TABLES } from '../config/aws';
 import { Booking } from '../types';
 import { v4 as uuidv4 } from 'uuid';
@@ -32,7 +32,7 @@ export async function createBooking(data: {
 
 export async function listBookings(): Promise<Booking[]> {
   const result = await docClient.send(
-    new QueryCommand({
+    new ScanCommand({
       TableName: TABLES.BOOKINGS,
     })
   );

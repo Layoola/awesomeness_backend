@@ -3,7 +3,8 @@ import * as imageService from '../services/imageService';
 
 export async function uploadImages(req: Request, res: Response, next: NextFunction) {
   try {
-    const { eventId } = req.body;
+    const { eventId } = req.params;
+    console.log("eventId----------------", eventId);
     const files = req.files as Express.Multer.File[];
 
     if (!eventId) {

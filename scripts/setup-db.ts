@@ -6,7 +6,7 @@
 
 import { DynamoDBClient, CreateTableCommand } from '@aws-sdk/client-dynamodb';
 
-const client = new DynamoDBClient({ region: process.env.AWS_REGION || 'us-east-1' });
+const client = new DynamoDBClient({ region: process.env.AWS_REGION || 'eu-north-1' });
 
 const tables = [
   {

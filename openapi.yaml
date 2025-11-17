@@ -1,0 +1,1279 @@
+openapi: 3.0.3
+info:
+  title: Awesomeness Photography Backend API
+  description: |
+    A comprehensive photography portfolio and booking management system API built with Node.js, Express, TypeScript, AWS DynamoDB, and AWS S3.
+    
+    ## Features
+    - Event Type Management (Wedding, Portrait, Corporate, etc.)
+    - Event Portfolio Management
+    - Image Upload and Storage (AWS S3)
+    - Customer Booking System
+    - Admin Authentication and Management
+    
+    ## Authentication
+    Admin routes require an API key passed in the `x-api-key` header.
+    
+    ## Base URL
+    - Development: `http://localhost:3000/api`
+    - Production: `https://your-domain.com/api`
+    
+  version: 0.1.0
+  contact:
+    name: Awesomeness Backend Support
+    email: support@example.com
+  license:
+    name: Private
+
+servers:
+  - url: http://localhost:3000/api
+    description: Local development server
+  - url: https://api.awesomeness.com/api
+    description: Production server
+
+tags:
+  - name: Health
+    description: Health check endpoints
+  - name: Admin - Authentication
+    description: Admin login and session management
+  - name: Admin - Dashboard
+    description: Admin dashboard and statistics
+  - name: Admin - Event Types
+    description: Admin event type management
+  - name: Admin - Events
+    description: Admin event management
+  - name: Admin - Images
+    description: Admin image upload and management
+  - name: Admin - Bookings
+    description: Admin booking management
+  - name: Event Types
+    description: Public event type endpoints
+  - name: Events
+    description: Public event endpoints
+  - name: Images
+    description: Public image endpoints
+  - name: Bookings
+    description: Customer booking endpoints
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: Check if the API server is running and healthy
+      operationId: getHealth
+      responses:
+        '200':
+          description: Server is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: '2025-11-15T10:30:45.123Z'
+
+  # ==========================================
+  # ADMIN AUTHENTICATION
+  # ==========================================
+  /admin/login:
+    post:
+      tags:
+        - Admin - Authentication
+      summary: Admin login
+      description: Authenticate admin user and receive API key for subsequent requests
+      operationId: adminLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - password
+              properties:
+                username:
+                  type: string
+                  example: admin
+                  description: Admin username
+                password:
+                  type: string
+                  format: password
+                  example: admin123
+                  description: Admin password
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Login successful
+                  data:
+                    type: object
+                    properties:
+                      sessionToken:
+                        type: string
+                        format: uuid
+                        example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                      apiKey:
+                        type: string
+                        example: your-admin-api-key
+                      username:
+                        type: string
+                        example: admin
+                      expiresIn:
+                        type: string
+                        example: 24h
+        '400':
+          description: Bad request - Missing required fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/verify:
+    get:
+      tags:
+        - Admin - Authentication
+      summary: Verify admin session
+      description: Verify that the current session/API key is valid
+      operationId: verifyAdminSession
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Session is valid
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Session is valid
+                  data:
+                    type: object
+                    properties:
+                      authenticated:
+                        type: boolean
+                        example: true
+                      timestamp:
+                        type: string
+                        format: date-time
+                        example: '2025-11-15T10:30:45.123Z'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /admin/logout:
+    post:
+      tags:
+        - Admin - Authentication
+      summary: Admin logout
+      description: Logout admin user
+      operationId: adminLogout
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Logout successful
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  # ==========================================
+  # ADMIN DASHBOARD
+  # ==========================================
+  /admin/dashboard:
+    get:
+      tags:
+        - Admin - Dashboard
+      summary: Get dashboard statistics
+      description: Retrieve overview statistics for the admin dashboard
+      operationId: getAdminDashboardStats
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Dashboard statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      totalEvents:
+                        type: integer
+                        example: 10
+                      totalEventTypes:
+                        type: integer
+                        example: 5
+                      totalImages:
+                        type: integer
+                        example: 150
+                      totalBookings:
+                        type: integer
+                        example: 25
+                      pendingBookings:
+                        type: integer
+                        example: 5
+                      confirmedBookings:
+                        type: integer
+                        example: 20
+                      recentActivity:
+                        type: array
+                        items:
+                          type: object
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  # ==========================================
+  # EVENT TYPES (PUBLIC & ADMIN)
+  # ==========================================
+  /event-types:
+    get:
+      tags:
+        - Event Types
+      summary: List all event types
+      description: Get a list of all available event types (public endpoint)
+      operationId: listEventTypes
+      responses:
+        '200':
+          description: Event types retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EventType'
+
+    post:
+      tags:
+        - Event Types
+      summary: Create event type (Admin)
+      description: Create a new event type (admin only)
+      operationId: createEventType
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - description
+              properties:
+                name:
+                  type: string
+                  example: Wedding Photography
+                  description: Name of the event type
+                description:
+                  type: string
+                  example: Professional wedding photography services
+                  description: Description of the event type
+      responses:
+        '201':
+          description: Event type created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventType'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /event-types/{id}:
+    get:
+      tags:
+        - Event Types
+      summary: Get event type by ID
+      description: Retrieve a specific event type by its ID (public endpoint)
+      operationId: getEventTypeById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Event type ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Event type retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventType'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /admin/event-types:
+    get:
+      tags:
+        - Admin - Event Types
+      summary: List all event types (Admin)
+      description: Get a list of all event types with admin access
+      operationId: adminListEventTypes
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Event types retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EventType'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /admin/event-types/{id}:
+    get:
+      tags:
+        - Admin - Event Types
+      summary: Get event type by ID (Admin)
+      description: Retrieve a specific event type by its ID with admin access
+      operationId: adminGetEventTypeById
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Event type ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Event type retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventType'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  # ==========================================
+  # EVENTS (PUBLIC & ADMIN)
+  # ==========================================
+  /events:
+    get:
+      tags:
+        - Events
+      summary: List all events
+      description: Get a list of all events, optionally filtered by event type (public endpoint)
+      operationId: listEvents
+      parameters:
+        - name: eventTypeId
+          in: query
+          description: Filter events by event type ID
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Events retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Event'
+
+    post:
+      tags:
+        - Events
+      summary: Create event (Admin)
+      description: Create a new event (admin only)
+      operationId: createEvent
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - eventTypeId
+                - name
+                - description
+                - date
+              properties:
+                eventTypeId:
+                  type: string
+                  format: uuid
+                  example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                  description: ID of the event type
+                name:
+                  type: string
+                  example: John & Jane Wedding
+                  description: Name of the event
+                description:
+                  type: string
+                  example: Beautiful wedding ceremony at Central Park
+                  description: Description of the event
+                date:
+                  type: string
+                  format: date
+                  example: '2025-12-25'
+                  description: Event date in ISO format
+                location:
+                  type: string
+                  example: Central Park, New York
+                  description: Event location
+                coverImageUrl:
+                  type: string
+                  format: uri
+                  example: https://s3.amazonaws.com/bucket/image.jpg
+                  description: URL of the cover image
+      responses:
+        '201':
+          description: Event created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /events/{id}:
+    get:
+      tags:
+        - Events
+      summary: Get event by ID
+      description: Retrieve a specific event by its ID (public endpoint)
+      operationId: getEventById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Event ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Event retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    put:
+      tags:
+        - Events
+      summary: Update event (Admin)
+      description: Update an existing event (admin only)
+      operationId: updateEvent
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Event ID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: Updated Event Name
+                description:
+                  type: string
+                  example: Updated description
+                date:
+                  type: string
+                  format: date
+                  example: '2025-12-26'
+                location:
+                  type: string
+                  example: New Location
+                coverImageUrl:
+                  type: string
+                  format: uri
+                  example: https://s3.amazonaws.com/bucket/new-image.jpg
+      responses:
+        '200':
+          description: Event updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /admin/events:
+    get:
+      tags:
+        - Admin - Events
+      summary: List all events (Admin)
+      description: Get a list of all events with admin access
+      operationId: adminListEvents
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: eventTypeId
+          in: query
+          description: Filter events by event type ID
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Events retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Event'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /admin/events/{id}:
+    get:
+      tags:
+        - Admin - Events
+      summary: Get event by ID (Admin)
+      description: Retrieve a specific event by its ID with admin access
+      operationId: adminGetEventById
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Event ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Event retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  # ==========================================
+  # IMAGES (PUBLIC & ADMIN)
+  # ==========================================
+  /images/event/{eventId}:
+    get:
+      tags:
+        - Images
+      summary: List images by event
+      description: Get all images for a specific event (public endpoint)
+      operationId: listImagesByEvent
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          description: Event ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Images retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Image'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /images/{id}:
+    get:
+      tags:
+        - Images
+      summary: Get image by ID
+      description: Get a specific image by its ID with signed S3 URL (public endpoint)
+      operationId: getImageById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Image ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Image retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageWithUrl'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /images:
+    post:
+      tags:
+        - Images
+      summary: Upload images (Admin)
+      description: Upload one or multiple images to an event (admin only)
+      operationId: uploadImages
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - images
+                - eventId
+              properties:
+                images:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: Image files to upload (max 10)
+                  maxItems: 10
+                eventId:
+                  type: string
+                  format: uuid
+                  description: ID of the event to associate images with
+                description:
+                  type: string
+                  description: Optional description for the images
+      responses:
+        '200':
+          description: Images uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Image'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /admin/events/{eventId}/images:
+    get:
+      tags:
+        - Admin - Images
+      summary: List images by event (Admin)
+      description: Get all images for a specific event with admin access
+      operationId: adminListImagesByEvent
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          description: Event ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Images retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Image'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    post:
+      tags:
+        - Admin - Images
+      summary: Upload images to event (Admin)
+      description: Upload one or multiple images to a specific event
+      operationId: adminUploadImagesToEvent
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          description: Event ID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - images
+              properties:
+                images:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: Image files to upload (max 10)
+                  maxItems: 10
+                description:
+                  type: string
+                  description: Optional description for the images
+      responses:
+        '200':
+          description: Images uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Image'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /admin/bulk-upload:
+    post:
+      tags:
+        - Admin - Images
+      summary: Bulk upload images (Admin)
+      description: Upload multiple images in bulk (up to 50 files)
+      operationId: adminBulkUpload
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - images
+                - eventId
+              properties:
+                images:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: Image files to upload (max 50)
+                  maxItems: 50
+                eventId:
+                  type: string
+                  format: uuid
+                  description: ID of the event to associate images with
+      responses:
+        '200':
+          description: Bulk upload successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Successfully uploaded 10 files
+                  data:
+                    type: object
+                    properties:
+                      uploaded:
+                        type: integer
+                        example: 10
+                      files:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            filename:
+                              type: string
+                              example: photo1.jpg
+                            size:
+                              type: integer
+                              example: 1024000
+                            contentType:
+                              type: string
+                              example: image/jpeg
+                            status:
+                              type: string
+                              example: uploaded
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  # ==========================================
+  # BOOKINGS
+  # ==========================================
+  /bookings:
+    post:
+      tags:
+        - Bookings
+      summary: Create booking
+      description: Create a new booking request (public endpoint)
+      operationId: createBooking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - eventTypeId
+                - customerName
+                - customerEmail
+                - customerPhone
+                - eventDate
+              properties:
+                eventTypeId:
+                  type: string
+                  format: uuid
+                  example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                  description: ID of the event type for booking
+                customerName:
+                  type: string
+                  example: John Doe
+                  description: Customer's full name
+                customerEmail:
+                  type: string
+                  format: email
+                  example: john@example.com
+                  description: Customer's email address
+                customerPhone:
+                  type: string
+                  example: '+1234567890'
+                  description: Customer's phone number
+                eventDate:
+                  type: string
+                  format: date
+                  example: '2025-12-25'
+                  description: Desired event date
+                eventLocation:
+                  type: string
+                  example: Central Park, New York
+                  description: Event location
+                message:
+                  type: string
+                  example: Looking for wedding photography services
+                  description: Additional message or requirements
+      responses:
+        '201':
+          description: Booking created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+
+    get:
+      tags:
+        - Bookings
+      summary: List bookings (Admin)
+      description: Get all bookings, optionally filtered by event type (admin only)
+      operationId: listBookings
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: eventTypeId
+          in: query
+          description: Filter bookings by event type ID
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Bookings retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Booking'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /admin/bookings:
+    get:
+      tags:
+        - Admin - Bookings
+      summary: List all bookings (Admin)
+      description: Get all bookings with admin access
+      operationId: adminListBookings
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: eventTypeId
+          in: query
+          description: Filter bookings by event type ID
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Bookings retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Booking'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+# ==========================================
+# COMPONENTS
+# ==========================================
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: Admin API key for authentication
+
+  schemas:
+    EventType:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+          description: Unique identifier for the event type
+        name:
+          type: string
+          example: Wedding Photography
+          description: Name of the event type
+        description:
+          type: string
+          example: Professional wedding photography services
+          description: Description of the event type
+        createdAt:
+          type: string
+          format: date-time
+          example: '2025-11-15T10:00:00.000Z'
+          description: Timestamp when the event type was created
+        updatedAt:
+          type: string
+          format: date-time
+          example: '2025-11-15T10:00:00.000Z'
+          description: Timestamp when the event type was last updated
+
+    Event:
+      type: object
+      required:
+        - id
+        - eventTypeId
+        - name
+        - description
+        - date
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: b2c3d4e5-f6a7-8901-bcde-f1234567890a
+          description: Unique identifier for the event
+        eventTypeId:
+          type: string
+          format: uuid
+          example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+          description: ID of the associated event type
+        name:
+          type: string
+          example: John & Jane Wedding
+          description: Name of the event
+        description:
+          type: string
+          example: Beautiful wedding ceremony at Central Park
+          description: Description of the event
+        date:
+          type: string
+          format: date
+          example: '2025-12-25'
+          description: Event date in ISO format
+        location:
+          type: string
+          example: Central Park, New York
+          description: Event location
+          nullable: true
+        coverImageUrl:
+          type: string
+          format: uri
+          example: https://s3.amazonaws.com/bucket/image.jpg
+          description: URL of the cover image
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+          example: '2025-11-15T10:00:00.000Z'
+          description: Timestamp when the event was created
+        updatedAt:
+          type: string
+          format: date-time
+          example: '2025-11-15T10:00:00.000Z'
+          description: Timestamp when the event was last updated
+
+    Image:
+      type: object
+      required:
+        - id
+        - eventId
+        - s3Key
+        - filename
+        - contentType
+        - size
+        - uploadedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: c3d4e5f6-a7b8-9012-cdef-1234567890ab
+          description: Unique identifier for the image
+        eventId:
+          type: string
+          format: uuid
+          example: b2c3d4e5-f6a7-8901-bcde-f1234567890a
+          description: ID of the associated event
+        s3Key:
+          type: string
+          example: events/b2c3d4e5-f6a7-8901-bcde-f1234567890a/photo1.jpg
+          description: S3 object key for the image
+        filename:
+          type: string
+          example: photo1.jpg
+          description: Original filename of the image
+        contentType:
+          type: string
+          example: image/jpeg
+          description: MIME type of the image
+        size:
+          type: integer
+          example: 1024000
+          description: File size in bytes
+        description:
+          type: string
+          example: Ceremony photo
+          description: Optional description of the image
+          nullable: true
+        uploadedAt:
+          type: string
+          format: date-time
+          example: '2025-11-15T10:00:00.000Z'
+          description: Timestamp when the image was uploaded
+
+    ImageWithUrl:
+      allOf:
+        - $ref: '#/components/schemas/Image'
+        - type: object
+          properties:
+            url:
+              type: string
+              format: uri
+              example: https://s3.amazonaws.com/bucket/signed-url
+              description: Signed S3 URL for accessing the image
+
+    Booking:
+      type: object
+      required:
+        - id
+        - eventTypeId
+        - customerName
+        - customerEmail
+        - customerPhone
+        - eventDate
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: d4e5f6a7-b8c9-0123-def0-1234567890bc
+          description: Unique identifier for the booking
+        eventTypeId:
+          type: string
+          format: uuid
+          example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+          description: ID of the event type being booked
+        customerName:
+          type: string
+          example: John Doe
+          description: Customer's full name
+        customerEmail:
+          type: string
+          format: email
+          example: john@example.com
+          description: Customer's email address
+        customerPhone:
+          type: string
+          example: '+1234567890'
+          description: Customer's phone number
+        eventDate:
+          type: string
+          format: date
+          example: '2025-12-25'
+          description: Desired event date
+        eventLocation:
+          type: string
+          example: Central Park, New York
+          description: Event location
+          nullable: true
+        message:
+          type: string
+          example: Looking for wedding photography services
+          description: Additional message or requirements
+          nullable: true
+        status:
+          type: string
+          enum:
+            - pending
+            - confirmed
+            - cancelled
+          example: pending
+          description: Status of the booking
+        createdAt:
+          type: string
+          format: date-time
+          example: '2025-11-15T10:00:00.000Z'
+          description: Timestamp when the booking was created
+        updatedAt:
+          type: string
+          format: date-time
+          example: '2025-11-15T10:00:00.000Z'
+          description: Timestamp when the booking was last updated
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: Error message
+        message:
+          type: string
+          example: Detailed error message
+
+  responses:
+    BadRequestError:
+      description: Bad request - Invalid input or missing required fields
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error: Invalid input parameters
+
+    UnauthorizedError:
+      description: Unauthorized - Invalid or missing API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Unauthorized - Invalid API key
+
+    NotFoundError:
+      description: Not found - The requested resource does not exist
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Resource not found
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error: Internal server error occurred

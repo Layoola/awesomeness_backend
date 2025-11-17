@@ -7,7 +7,7 @@ import {
 } from '@aws-sdk/client-dynamodb';
 import { logger } from '../utils/logger';
 
-const client = new DynamoDBClient({ region: process.env.AWS_REGION || 'us-east-1' });
+const client = new DynamoDBClient({ region: process.env.AWS_REGION || 'eu-north-1' });
 
 const tables = [
   {

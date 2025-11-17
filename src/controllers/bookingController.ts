@@ -41,10 +41,12 @@ export async function listBookings(req: Request, res: Response, next: NextFuncti
 
     if (eventTypeId) {
       const bookings = await bookingService.listBookingsByEventType(eventTypeId as string);
+      console.log("bookings listing by event type----------------", bookings)
       return res.json(bookings);
     }
 
     const bookings = await bookingService.listBookings();
+    console.log("bookings listing----------------", bookings)
     res.json(bookings);
   } catch (error) {
     next(error);

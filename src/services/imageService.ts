@@ -1,5 +1,5 @@
 import { PutCommand, GetCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
-import { PutObjectCommand } from '@aws-sdk/client-s3';
+import { PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { docClient, s3Client, TABLES, S3_BUCKET } from '../config/aws';
 import { Image } from '../types';
@@ -23,7 +23,7 @@ export async function uploadImageToS3(
   // Generate presigned URL valid for 7 days
   const url = await getSignedUrl(
     s3Client,
-    new PutObjectCommand({
+    new GetObjectCommand({
       Bucket: S3_BUCKET,
       Key: s3Key,
     }),
@@ -84,7 +84,7 @@ export async function listImagesByEvent(eventId: string): Promise<Image[]> {
 }
 
 export async function getPresignedUrl(s3Key: string): Promise<string> {
-  const command = new PutObjectCommand({
+  const command = new GetObjectCommand({
     Bucket: S3_BUCKET,
     Key: s3Key,
   });
